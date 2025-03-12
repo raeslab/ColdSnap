@@ -159,12 +159,12 @@ def test_predict(model_instance):
     model_instance.fit()
     X_test = model_instance.data.X_test
     predictions = model_instance.predict(X_test)
-    assert len(predictions) == len(
-        X_test
-    ), "Prediction length does not match test data length."
-    assert set(predictions).issubset(
-        set(model_instance.data.y_train.unique())
-    ), "Predictions contain unexpected classes."
+    assert len(predictions) == len(X_test), (
+        "Prediction length does not match test data length."
+    )
+    assert set(predictions).issubset(set(model_instance.data.y_train.unique())), (
+        "Predictions contain unexpected classes."
+    )
 
 
 def test_predict_proba_supported(model_instance):
@@ -177,9 +177,9 @@ def test_predict_proba_supported(model_instance):
         len(X_test),
         len(model_instance.data.classes),
     ), "Shape of predict_proba output is incorrect."
-    assert (probabilities >= 0).all() and (
-        probabilities <= 1
-    ).all(), "Probabilities should be between 0 and 1."
+    assert (probabilities >= 0).all() and (probabilities <= 1).all(), (
+        "Probabilities should be between 0 and 1."
+    )
 
 
 def test_predict_proba_not_supported(model_instance_svc):
@@ -214,15 +214,15 @@ def test_summary(model_instance):
     assert "num_classes" in summary
     assert "classes" in summary
 
-    assert summary["num_features"] == len(
-        model_instance.data.features
-    ), "Number of features in summary does not match."
-    assert summary["num_classes"] == len(
-        model_instance.data.classes
-    ), "Number of classes in summary does not match."
-    assert set(summary["features"].split(", ")) == set(
-        model_instance.data.features
-    ), "Features in summary do not match."
+    assert summary["num_features"] == len(model_instance.data.features), (
+        "Number of features in summary does not match."
+    )
+    assert summary["num_classes"] == len(model_instance.data.classes), (
+        "Number of classes in summary does not match."
+    )
+    assert set(summary["features"].split(", ")) == set(model_instance.data.features), (
+        "Features in summary do not match."
+    )
     assert set(summary["classes"].split(", ")) == set(
         map(str, model_instance.data.classes)
     ), "Classes in summary do not match."

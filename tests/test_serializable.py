@@ -33,9 +33,9 @@ def test_serialization(tmp_path):
 
     # Test from_pickle
     loaded_obj = MockSerializable.from_pickle(path)
-    assert isinstance(
-        loaded_obj, MockSerializable
-    ), "Loaded object is not of type MockSerializable."
+    assert isinstance(loaded_obj, MockSerializable), (
+        "Loaded object is not of type MockSerializable."
+    )
     assert loaded_obj.data == obj.data, "Loaded data does not match original data."
 
 

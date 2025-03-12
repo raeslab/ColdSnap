@@ -13,9 +13,9 @@ def test_confusion_matrix(model_instance):
     cm = model_instance.confusion_matrix()
 
     assert cm.shape[0] == cm.shape[1], "Confusion matrix should be square."
-    assert cm.sum() == len(
-        model_instance.data.y_test
-    ), "Sum of confusion matrix elements should match the number of test samples."
+    assert cm.sum() == len(model_instance.data.y_test), (
+        "Sum of confusion matrix elements should match the number of test samples."
+    )
 
 
 def test_confusion_matrix_no_data():
@@ -46,9 +46,9 @@ def test_display_confusion_matrix(model_instance):
     model_instance.fit()
     cm_display = model_instance.display_confusion_matrix()
 
-    assert isinstance(
-        cm_display, ConfusionMatrixDisplay
-    ), "display_confusion_matrix should return an instance of ConfusionMatrixDisplay."
+    assert isinstance(cm_display, ConfusionMatrixDisplay), (
+        "display_confusion_matrix should return an instance of ConfusionMatrixDisplay."
+    )
 
 
 def test_display_confusion_matrix_no_data():
@@ -113,9 +113,9 @@ def test_display_roc_curve_with_proba(model_instance_with_proba):
     # Capture the ROC display output
     roc_display = model_instance_with_proba.display_roc_curve()
 
-    assert isinstance(
-        roc_display, RocCurveDisplay
-    ), "display_roc_curve did not return a RocCurveDisplay object."
+    assert isinstance(roc_display, RocCurveDisplay), (
+        "display_roc_curve did not return a RocCurveDisplay object."
+    )
 
 
 def test_display_shap_beeswarm(model_instance):
@@ -123,9 +123,9 @@ def test_display_shap_beeswarm(model_instance):
 
     ax = model_instance.display_shap_beeswarm()
 
-    assert isinstance(
-        ax, matplotlib.axes._axes.Axes
-    ), "display_shap_beeswarm did not return a Axes object."
+    assert isinstance(ax, matplotlib.axes._axes.Axes), (
+        "display_shap_beeswarm did not return a Axes object."
+    )
 
 
 def test_display_shap_beeswarm_no_data_clf(model_instance):
