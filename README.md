@@ -1,4 +1,4 @@
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)  [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![Run Pytest](https://github.com/raeslab/ColdSnap/actions/workflows/autopytest.yml/badge.svg)](https://github.com/raeslab/ColdSnap/actions/workflows/autopytest.yml) [![Coverage](https://raw.githubusercontent.com/raeslab/ColdSnap/main/docs/coverage-badge.svg)](https://raw.githubusercontent.com/raeslab/ColdSnap/main/docs/coverage-badge.svg) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)  [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 # ColdSnap: Freeze ML models and their training/testing data
 
