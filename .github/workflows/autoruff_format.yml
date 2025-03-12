@@ -16,14 +16,3 @@ jobs:
           git config --global user.email '${GITHUB_ACTOR}@users.noreply.github.com'
           git commit -am "fixup! Format Python code with ruff"
           git push
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: 'check'
-      - name: If needed, commit ruff check
-        if: failure()
-        run: |
-          ruff check --fix
-          git config --global user.name autoruff_push
-          git config --global user.email '${GITHUB_ACTOR}@users.noreply.github.com'
-          git commit -am "fixup! Format Python code with ruff"
-          git push      
