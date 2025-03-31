@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="ColdSnap",
-    version="0.0.1",
+    version="0.0.2",
     author="Sebastian Proost",
     author_email="sebastian.proost@gmail.com",
     description="Create snapshots of machine learning models and their training data",

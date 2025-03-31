@@ -126,3 +126,24 @@ def test_data_init_inconsistent_lengths_test():
         ValueError, match="Inconsistent data lengths between X and y splits."
     ):
         Data(X_train, y_train, X_test, y_test)
+
+
+def test_purge(sample_dataframe):
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+
+    # Ensure initial data is not empty
+    assert not data_instance.X_train.empty
+    assert not data_instance.y_train.empty
+    assert not data_instance.X_test.empty
+    assert not data_instance.y_test.empty
+
+    # Purge data
+    data_instance.purge()
+
+    # Check that all data is removed but columns remain
+    assert data_instance.X_train.empty and list(data_instance.X_train.columns) == list(sample_dataframe.drop(columns="label").columns)
+    assert data_instance.y_train.empty and data_instance.y_train.name == "label"
+    assert data_instance.X_test.empty and list(data_instance.X_test.columns) == list(sample_dataframe.drop(columns="label").columns)
+    assert data_instance.y_test.empty and data_instance.y_test.name == "label"

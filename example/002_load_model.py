@@ -27,3 +27,16 @@ if __name__ == "__main__":
 
     # SHAP beeswarm
     cs_model.display_shap_beeswarm()
+
+    # Test Purge
+    print(cs_model._data.X_train,
+          cs_model._data.y_train,
+          cs_model._data.X_test,
+          cs_model._data.y_test)
+
+    cs_model.purge()
+
+    print(cs_model._data.X_train,
+          cs_model._data.y_train,
+          cs_model._data.X_test,
+          cs_model._data.y_test)

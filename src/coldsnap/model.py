@@ -128,6 +128,11 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
 
         return metrics
 
+    def purge(self) -> None:
+        """Purges the associated data instance if it exists."""
+        if self._data is not None:
+            self._data.purge()
+
     def summary(self) -> dict:
         if self._data is None:
             raise ValueError("No data available for summary.")

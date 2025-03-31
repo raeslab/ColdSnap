@@ -61,6 +61,13 @@ class Data(Serializable):
     def set_short_description(self, short_description: str) -> None:
         self.short_description = short_description
 
+    def purge(self) -> None:
+        """Removes all data while keeping the dataframe headers intact."""
+        self.X_train = self.X_train.iloc[0:0]
+        self.y_train = self.y_train.iloc[0:0]
+        self.X_test = self.X_test.iloc[0:0]
+        self.y_test = self.y_test.iloc[0:0]
+
     @property
     def features(self) -> List[str]:
         return list(self.X_train.columns)

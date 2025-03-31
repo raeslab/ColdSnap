@@ -230,3 +230,12 @@ def test_summary(model_instance):
     model_instance._data = None
     with pytest.raises(ValueError, match="No data available for summary."):
         model_instance.summary()
+
+
+def test_purge(model_instance):
+    model_instance.purge()
+    assert model_instance.data is not None  # Ensure data instance still exists
+    assert model_instance.data.X_train.empty
+    assert model_instance.data.y_train.empty
+    assert model_instance.data.X_test.empty
+    assert model_instance.data.y_test.empty
