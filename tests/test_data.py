@@ -143,7 +143,11 @@ def test_purge(sample_dataframe):
     data_instance.purge()
 
     # Check that all data is removed but columns remain
-    assert data_instance.X_train.empty and list(data_instance.X_train.columns) == list(sample_dataframe.drop(columns="label").columns)
+    assert data_instance.X_train.empty and list(data_instance.X_train.columns) == list(
+        sample_dataframe.drop(columns="label").columns
+    )
     assert data_instance.y_train.empty and data_instance.y_train.name == "label"
-    assert data_instance.X_test.empty and list(data_instance.X_test.columns) == list(sample_dataframe.drop(columns="label").columns)
+    assert data_instance.X_test.empty and list(data_instance.X_test.columns) == list(
+        sample_dataframe.drop(columns="label").columns
+    )
     assert data_instance.y_test.empty and data_instance.y_test.name == "label"
