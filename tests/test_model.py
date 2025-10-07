@@ -89,6 +89,12 @@ def test_setters(model_instance, sample_dataframe):
     model_instance.clf = new_clf
     assert model_instance.clf is new_clf
 
+    # Test estimator setter
+    another_clf = RandomForestClassifier(random_state=44)
+    model_instance.estimator = another_clf
+    assert model_instance.estimator is another_clf
+    assert model_instance.clf is another_clf  # Should update both properties
+
     new_data = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model_instance.data = new_data
     assert model_instance.data is new_data
@@ -165,6 +171,17 @@ def test_predict(model_instance):
     )
 
 
+def test_predict_without_estimator(sample_dataframe):
+    # Test predict raises error when no estimator is set
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    model = Model(data=data_instance)
+
+    with pytest.raises(ValueError, match="No estimator provided."):
+        model.predict(data_instance.X_test)
+
+
 def test_predict_proba_supported(model_instance):
     # Test predict_proba when the classifier supports it
     model_instance.fit()
@@ -189,6 +206,17 @@ def test_predict_proba_not_supported(model_instance_svc):
         match="The classifier does not support probability predictions.",
     ):
         model_instance_svc.predict_proba(X_test)
+
+
+def test_predict_proba_without_estimator(sample_dataframe):
+    # Test predict_proba raises error when no estimator is set
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    model = Model(data=data_instance)
+
+    with pytest.raises(ValueError, match="No estimator provided."):
+        model.predict_proba(data_instance.X_test)
 
 
 def test_hash(model_instance):
@@ -259,6 +287,37 @@ def test_transformer_workflow(sample_dataframe):
     assert X_transformed.shape == model.data.X_train.shape
     # StandardScaler should produce mean ~0 and std ~1
     assert abs(X_transformed.mean()) < 0.1
+
+
+def test_transform_without_estimator(sample_dataframe):
+    """Test that transform raises error when no estimator is set."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    model = Model(data=data_instance)
+
+    with pytest.raises(ValueError, match="No estimator provided."):
+        model.transform(data_instance.X_test)
+
+
+def test_transform_estimator_without_transform_method(sample_dataframe):
+    """Test that transform raises error when estimator lacks transform method."""
+    from sklearn.base import BaseEstimator
+
+    # Create a mock transformer without transform method
+    class MockTransformer(BaseEstimator):
+        def fit(self, X, y=None):
+            return self
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    mock_transformer = MockTransformer()
+    model = Model(data=data_instance, estimator=mock_transformer)
+    model.fit()
+
+    with pytest.raises(AttributeError, match="does not have a transform method"):
+        model.transform(data_instance.X_test)
 
 
 def test_transformer_cannot_predict(sample_dataframe):
