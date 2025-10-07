@@ -89,6 +89,12 @@ def test_setters(model_instance, sample_dataframe):
     model_instance.clf = new_clf
     assert model_instance.clf is new_clf
 
+    # Test estimator setter
+    another_clf = RandomForestClassifier(random_state=44)
+    model_instance.estimator = another_clf
+    assert model_instance.estimator is another_clf
+    assert model_instance.clf is another_clf  # Should update both properties
+
     new_data = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model_instance.data = new_data
     assert model_instance.data is new_data
@@ -99,7 +105,7 @@ def test_fit_without_data():
     model_without_data = Model(clf=RandomForestClassifier())
 
     # Attempt to fit without data
-    with pytest.raises(ValueError, match="No data provided to fit the classifier."):
+    with pytest.raises(ValueError, match="No data provided to fit the estimator."):
         model_without_data.fit()
 
 
@@ -111,7 +117,7 @@ def test_fit_without_classifier(sample_dataframe):
     model_without_clf = Model(data=data_instance)
 
     # Attempt to fit without a classifier
-    with pytest.raises(ValueError, match="No classifier provided to fit the data."):
+    with pytest.raises(ValueError, match="No estimator provided to fit the data."):
         model_without_clf.fit()
 
 
@@ -136,9 +142,7 @@ def test_evaluate_without_data():
     model_without_data = Model(clf=RandomForestClassifier())
 
     # Attempt to evaluate without data
-    with pytest.raises(
-        ValueError, match="No data provided to evaluate the classifier."
-    ):
+    with pytest.raises(ValueError, match="No data provided to evaluate the estimator."):
         model_without_data.evaluate()
 
 
@@ -150,7 +154,7 @@ def test_evaluate_without_classifier(sample_dataframe):
     model_without_clf = Model(data=data_instance)
 
     # Attempt to evaluate without a classifier
-    with pytest.raises(ValueError, match="No classifier provided to evaluate."):
+    with pytest.raises(ValueError, match="No estimator provided to evaluate."):
         model_without_clf.evaluate()
 
 
@@ -165,6 +169,17 @@ def test_predict(model_instance):
     assert set(predictions).issubset(set(model_instance.data.y_train.unique())), (
         "Predictions contain unexpected classes."
     )
+
+
+def test_predict_without_estimator(sample_dataframe):
+    # Test predict raises error when no estimator is set
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    model = Model(data=data_instance)
+
+    with pytest.raises(ValueError, match="No estimator provided."):
+        model.predict(data_instance.X_test)
 
 
 def test_predict_proba_supported(model_instance):
@@ -191,6 +206,17 @@ def test_predict_proba_not_supported(model_instance_svc):
         match="The classifier does not support probability predictions.",
     ):
         model_instance_svc.predict_proba(X_test)
+
+
+def test_predict_proba_without_estimator(sample_dataframe):
+    # Test predict_proba raises error when no estimator is set
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    model = Model(data=data_instance)
+
+    with pytest.raises(ValueError, match="No estimator provided."):
+        model.predict_proba(data_instance.X_test)
 
 
 def test_hash(model_instance):
@@ -239,3 +265,300 @@ def test_purge(model_instance):
     assert model_instance.data.y_train.empty
     assert model_instance.data.X_test.empty
     assert model_instance.data.y_test.empty
+
+
+# Tests for transformer support
+def test_transformer_workflow(sample_dataframe):
+    """Test that transformers work correctly with fit and transform."""
+    from sklearn.preprocessing import StandardScaler
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+
+    # Fit the transformer
+    model.fit()
+
+    # Transform the data
+    X_transformed = model.transform(model.data.X_train)
+
+    assert X_transformed.shape == model.data.X_train.shape
+    # StandardScaler should produce mean ~0 and std ~1
+    assert abs(X_transformed.mean()) < 0.1
+
+
+def test_transform_without_estimator(sample_dataframe):
+    """Test that transform raises error when no estimator is set."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    model = Model(data=data_instance)
+
+    with pytest.raises(ValueError, match="No estimator provided."):
+        model.transform(data_instance.X_test)
+
+
+def test_transform_estimator_without_transform_method(sample_dataframe):
+    """Test that transform raises error when estimator lacks transform method."""
+    from sklearn.base import BaseEstimator
+
+    # Create a mock transformer without transform method
+    class MockTransformer(BaseEstimator):
+        def fit(self, X, y=None):
+            return self
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    mock_transformer = MockTransformer()
+    model = Model(data=data_instance, estimator=mock_transformer)
+    model.fit()
+
+    with pytest.raises(AttributeError, match="does not have a transform method"):
+        model.transform(data_instance.X_test)
+
+
+def test_transformer_cannot_predict(sample_dataframe):
+    """Test that transformers cannot use predict()."""
+    from sklearn.preprocessing import StandardScaler
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+    model.fit()
+
+    with pytest.raises(TypeError, match="Cannot call predict.*transformer"):
+        model.predict(model.data.X_test)
+
+
+def test_transformer_cannot_predict_proba(sample_dataframe):
+    """Test that transformers cannot use predict_proba()."""
+    from sklearn.preprocessing import StandardScaler
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+    model.fit()
+
+    with pytest.raises(TypeError, match="Cannot call predict_proba.*transformer"):
+        model.predict_proba(model.data.X_test)
+
+
+def test_transformer_cannot_evaluate(sample_dataframe):
+    """Test that transformers cannot use evaluate()."""
+    from sklearn.preprocessing import StandardScaler
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+    model.fit()
+
+    with pytest.raises(TypeError, match="Cannot evaluate.*transformer"):
+        model.evaluate()
+
+
+def test_classifier_cannot_transform(sample_dataframe):
+    """Test that classifiers cannot use transform()."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, estimator=clf)
+    model.fit()
+
+    with pytest.raises(TypeError, match="Cannot call transform.*classifier"):
+        model.transform(model.data.X_test)
+
+
+# Tests for regressor support
+def test_regressor_workflow(sample_dataframe):
+    """Test that regressors work correctly with fit and predict."""
+    from sklearn.linear_model import LinearRegression
+
+    # Create a regression dataset
+    df = sample_dataframe.copy()
+    df["target"] = df["feature1"] * 2 + df["feature2"] * 3
+    # Drop the 'label' column as it's not needed for regression
+    df = df.drop(columns=["label"])
+
+    data_instance = Data.from_df(df, "target", test_size=0.2, random_state=42)
+    regressor = LinearRegression()
+    model = Model(data=data_instance, estimator=regressor)
+
+    # Fit and predict should work
+    model.fit()
+    predictions = model.predict(model.data.X_test)
+
+    assert len(predictions) == len(model.data.X_test)
+
+
+def test_regressor_cannot_predict_proba(sample_dataframe):
+    """Test that regressors cannot use predict_proba()."""
+    from sklearn.linear_model import LinearRegression
+
+    df = sample_dataframe.copy()
+    df["target"] = df["feature1"] * 2 + df["feature2"] * 3
+    df = df.drop(columns=["label"])
+
+    data_instance = Data.from_df(df, "target", test_size=0.2, random_state=42)
+    regressor = LinearRegression()
+    model = Model(data=data_instance, estimator=regressor)
+    model.fit()
+
+    with pytest.raises(TypeError, match="Cannot call predict_proba.*regressor"):
+        model.predict_proba(model.data.X_test)
+
+
+def test_regressor_evaluate_not_implemented(sample_dataframe):
+    """Test that regressor evaluate() raises NotImplementedError."""
+    from sklearn.linear_model import LinearRegression
+
+    df = sample_dataframe.copy()
+    df["target"] = df["feature1"] * 2 + df["feature2"] * 3
+    df = df.drop(columns=["label"])
+
+    data_instance = Data.from_df(df, "target", test_size=0.2, random_state=42)
+    regressor = LinearRegression()
+    model = Model(data=data_instance, estimator=regressor)
+    model.fit()
+
+    with pytest.raises(NotImplementedError, match="Evaluation for regressors"):
+        model.evaluate()
+
+
+# Tests for backward compatibility
+def test_clf_parameter_still_works(sample_dataframe):
+    """Test that the original clf parameter still works."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, clf=clf)
+
+    model.fit()
+    predictions = model.predict(model.data.X_test)
+
+    assert len(predictions) == len(model.data.X_test)
+
+
+def test_estimator_parameter_works(sample_dataframe):
+    """Test that the new estimator parameter works."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, estimator=clf)
+
+    model.fit()
+    predictions = model.predict(model.data.X_test)
+
+    assert len(predictions) == len(model.data.X_test)
+
+
+def test_cannot_provide_both_clf_and_estimator(sample_dataframe):
+    """Test that providing both clf and estimator raises an error."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+
+    with pytest.raises(ValueError, match="either 'clf' or 'estimator'"):
+        Model(data=data_instance, clf=clf, estimator=clf)
+
+
+def test_clf_property_works(sample_dataframe):
+    """Test that the clf property still works for backward compatibility."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, estimator=clf)
+
+    # Should be able to access via .clf
+    assert model.clf is clf
+    assert isinstance(model.clf, RandomForestClassifier)
+
+
+def test_estimator_property_works(sample_dataframe):
+    """Test that the estimator property works."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, clf=clf)
+
+    # Should be able to access via .estimator
+    assert model.estimator is clf
+    assert isinstance(model.estimator, RandomForestClassifier)
+
+
+def test_get_estimator_type(sample_dataframe):
+    """Test that _get_estimator_type correctly identifies estimator types."""
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.linear_model import LinearRegression
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+
+    # Test classifier
+    clf_model = Model(data=data_instance, estimator=RandomForestClassifier())
+    assert clf_model._get_estimator_type() == "classifier"
+
+    # Test regressor
+    reg_model = Model(data=data_instance, estimator=LinearRegression())
+    assert reg_model._get_estimator_type() == "regressor"
+
+    # Test transformer
+    trans_model = Model(data=data_instance, estimator=StandardScaler())
+    assert trans_model._get_estimator_type() == "transformer"
+
+    # Test None
+    none_model = Model(data=data_instance)
+    assert none_model._get_estimator_type() is None
+
+
+def test_transformer_summary(sample_dataframe):
+    """Test that summary works for transformers and doesn't include class info."""
+    from sklearn.preprocessing import StandardScaler
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+    model.fit()
+
+    summary = model.summary()
+
+    assert "estimator_type" in summary
+    assert summary["estimator_type"] == "transformer"
+    # Transformers shouldn't have class information
+    assert "num_classes" not in summary or summary.get("num_classes") is None
+    assert "classes" not in summary or summary.get("classes") is None
+
+
+def test_classifier_summary_includes_classes(sample_dataframe):
+    """Test that summary for classifiers still includes class info."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, estimator=clf)
+    model.fit()
+
+    summary = model.summary()
+
+    assert "estimator_type" in summary
+    assert summary["estimator_type"] == "classifier"
+    assert "num_classes" in summary
+    assert "classes" in summary
+    assert summary["num_classes"] == 3  # From sample_dataframe fixture

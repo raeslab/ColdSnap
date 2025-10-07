@@ -139,6 +139,9 @@ def test_purge(sample_dataframe):
     assert not data_instance.X_test.empty
     assert not data_instance.y_test.empty
 
+    # Classes should be populated before purge
+    assert data_instance.classes is not None
+
     # Purge data
     data_instance.purge()
 
@@ -151,3 +154,6 @@ def test_purge(sample_dataframe):
         sample_dataframe.drop(columns="label").columns
     )
     assert data_instance.y_test.empty and data_instance.y_test.name == "label"
+
+    # Classes should return None after purge (when y_train and y_test are empty)
+    assert data_instance.classes is None

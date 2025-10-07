@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ColdSnap is a Python framework for serializing machine learning models and their training/testing data together as "frozen" snapshots. The core architecture consists of two main classes that work together:
 
 - **Data**: Handles train/test splits, feature information, and data serialization
-- **Model**: Contains a scikit-learn classifier and associated Data instance, with evaluation capabilities
+- **Model**: Contains a scikit-learn estimator (classifier, regressor, or transformer) and associated Data instance, with evaluation capabilities
 
 Both classes inherit from `Serializable` which provides pickle-based persistence with gzip compression.
 
@@ -54,11 +54,15 @@ pip install -e .
 - Generates SHA256 hash of all data for integrity checking
 
 **Model Class** (`src/coldsnap/model.py`)
-- Combines Data instance with scikit-learn classifier
-- Inherits evaluation mixins: ConfusionMatrixMixin, ROCMixin, SHAPMixin
-- Provides `.fit()`, `.predict()`, `.evaluate()` methods
-- Generates model hash based on serialized classifier
-- `.summary()` returns comprehensive model + data metadata
+- Combines Data instance with any scikit-learn estimator (classifiers, regressors, transformers)
+- Accepts both `clf=` (backward compatible) and `estimator=` parameters
+- Automatically detects estimator type and enables appropriate methods
+- Inherits evaluation mixins: ConfusionMatrixMixin, ROCMixin, SHAPMixin (classifier-only)
+- **Classifiers**: Provides `.fit()`, `.predict()`, `.predict_proba()`, `.evaluate()` methods
+- **Regressors**: Provides `.fit()`, `.predict()` methods (evaluation not yet implemented)
+- **Transformers**: Provides `.fit()`, `.transform()` methods
+- Generates model hash based on serialized estimator
+- `.summary()` returns comprehensive model + data metadata (includes estimator type)
 
 **Serializable Base** (`src/coldsnap/serializable.py`)
 - Provides `.to_pickle()` and `.from_pickle()` class methods
@@ -71,6 +75,90 @@ Model evaluation capabilities are provided through mixins in `src/coldsnap/mixin
 - **ConfusionMatrixMixin**: `.confusion_matrix()`, `.display_confusion_matrix()`
 - **ROCMixin**: `.display_roc_curve()` with multi-class support
 - **SHAPMixin**: `.display_shap_beeswarm()` for feature importance
+
+**Note**: Mixins only work with classifiers and will raise helpful TypeErrors if called on regressors or transformers.
+
+## Usage Examples
+
+### Working with Classifiers (Original Functionality)
+
+```python
+from sklearn.ensemble import RandomForestClassifier
+from coldsnap import Data, Model
+
+# Create data
+data = Data.from_df(df, label_col="target", test_size=0.2, random_state=42)
+
+# Create model with classifier (both syntaxes work)
+model1 = Model(data=data, clf=RandomForestClassifier())  # Legacy syntax
+model2 = Model(data=data, estimator=RandomForestClassifier())  # New syntax
+
+# Fit, predict, evaluate
+model1.fit()
+predictions = model1.predict(data.X_test)
+metrics = model1.evaluate()
+
+# Visualization methods work for classifiers
+model1.display_confusion_matrix()
+model1.display_roc_curve()
+```
+
+### Working with Transformers (New)
+
+```python
+from sklearn.preprocessing import StandardScaler
+from coldsnap import Data, Model
+
+# Create data
+data = Data.from_df(df, label_col="target", test_size=0.2, random_state=42)
+
+# Create model with transformer
+scaler_model = Model(data=data, estimator=StandardScaler())
+
+# Fit and transform
+scaler_model.fit()
+X_scaled = scaler_model.transform(data.X_train)
+
+# Save the fitted transformer with data
+scaler_model.to_pickle("scaler_snapshot.pkl.gz")
+
+# Load and use later
+loaded_scaler = Model.from_pickle("scaler_snapshot.pkl.gz")
+X_new_scaled = loaded_scaler.transform(X_new)
+```
+
+### Working with Regressors (New)
+
+```python
+from sklearn.linear_model import LinearRegression
+from coldsnap import Data, Model
+
+# Create regression data
+data = Data.from_df(df, label_col="price", test_size=0.2, random_state=42)
+
+# Create model with regressor
+reg_model = Model(data=data, estimator=LinearRegression())
+
+# Fit and predict
+reg_model.fit()
+predictions = reg_model.predict(data.X_test)
+
+# Note: evaluate() not yet implemented for regressors
+# model.evaluate()  # Would raise NotImplementedError
+```
+
+### Backward Compatibility
+
+All existing code using `clf=` parameter continues to work without modification:
+
+```python
+# Old pickles load correctly with zero migration
+old_model = Model.from_pickle("old_classifier.pkl.gz")
+old_model.fit()  # Works exactly as before
+
+# Both properties are available
+assert old_model.clf is old_model.estimator  # True
+```
 
 ### Utilities
 
@@ -107,3 +195,4 @@ src/coldsnap/
 3. pytest runs with coverage reporting and badge generation
 4. Both ruff and pytest actions can auto-commit fixes when needed
 - always run ruff check and ruff format to fix linting and formating errors when making major changes to python code (.py files)
+- when writing a commit message (for git) don't include emoji, don't mention Claude, Claude code or Antropic

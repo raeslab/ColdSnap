@@ -73,7 +73,11 @@ class Data(Serializable):
         return list(self.X_train.columns)
 
     @property
-    def classes(self) -> List:
+    def classes(self) -> Optional[List]:
+        """Return unique classes from the labels, or None if no labels exist."""
+        # Check if y_train and y_test are empty (e.g., after purge or for transformers)
+        if self.y_train.empty and self.y_test.empty:
+            return None
         return sorted(set(self.y_train.tolist() + self.y_test.tolist()))
 
     @property

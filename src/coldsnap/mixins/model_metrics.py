@@ -14,7 +14,14 @@ class ConfusionMatrixMixin:
         if not self._data:
             raise ValueError("No data provided to perform predictions.")
         if not self._clf:
-            raise ValueError("No classifier provided to perform predictions.")
+            raise ValueError("No estimator provided to perform predictions.")
+
+        # Check that estimator is a classifier
+        estimator_type = self._get_estimator_type()
+        if estimator_type != "classifier":
+            raise TypeError(
+                f"Confusion matrix requires a classifier, but estimator is a {estimator_type}."
+            )
 
         X_test, y_test = self._data.X_test, self._data.y_test
         y_pred = self._clf.predict(X_test)
@@ -36,7 +43,15 @@ class ROCMixin:
         if not self._data:
             raise ValueError("No data provided to perform predictions.")
         if not self._clf:
-            raise ValueError("No classifier provided to perform predictions.")
+            raise ValueError("No estimator provided to perform predictions.")
+
+        # Check that estimator is a classifier
+        estimator_type = self._get_estimator_type()
+        if estimator_type != "classifier":
+            raise TypeError(
+                f"ROC curve requires a classifier, but estimator is a {estimator_type}."
+            )
+
         if not hasattr(self._clf, "predict_proba"):
             raise NotImplementedError(
                 "The classifier does not support probability predictions."
@@ -66,7 +81,14 @@ class SHAPMixin:
         if not self._data:
             raise ValueError("No data provided to perform predictions.")
         if not self._clf:
-            raise ValueError("No classifier provided to perform predictions.")
+            raise ValueError("No estimator provided to perform predictions.")
+
+        # Check that estimator is a classifier
+        estimator_type = self._get_estimator_type()
+        if estimator_type != "classifier":
+            raise TypeError(
+                f"SHAP visualization requires a classifier, but estimator is a {estimator_type}."
+            )
 
         explainer = TreeExplainer(self._clf)
         explanation = explainer(self.data.X_train)
