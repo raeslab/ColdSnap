@@ -36,7 +36,7 @@ def test_confusion_matrix_no_classifier(sample_dataframe):
 
     # Attempt to call confusion_matrix without classifier
     with pytest.raises(
-        ValueError, match="No classifier provided to perform predictions."
+        ValueError, match="No estimator provided to perform predictions."
     ):
         model_without_clf.confusion_matrix()
 
@@ -69,7 +69,7 @@ def test_display_confusion_matrix_no_classifier(sample_dataframe):
 
     # Attempt to call display_confusion_matrix without classifier
     with pytest.raises(
-        ValueError, match="No classifier provided to perform predictions."
+        ValueError, match="No estimator provided to perform predictions."
     ):
         model_without_clf.display_confusion_matrix()
 
@@ -90,7 +90,7 @@ def test_display_roc_curve_no_classifier(sample_dataframe):
     model_without_clf = Model(data=data_instance)
 
     with pytest.raises(
-        ValueError, match="No classifier provided to perform predictions."
+        ValueError, match="No estimator provided to perform predictions."
     ):
         model_without_clf.display_roc_curve()
 
@@ -132,7 +132,7 @@ def test_display_shap_beeswarm_no_data_clf(model_instance):
     model_instance.clf = None
 
     with pytest.raises(
-        ValueError, match="No classifier provided to perform predictions."
+        ValueError, match="No estimator provided to perform predictions."
     ):
         model_instance.display_shap_beeswarm()
 

@@ -1,5 +1,5 @@
-from typing import Optional
-from sklearn.base import BaseEstimator
+from typing import Optional, Literal
+from sklearn.base import BaseEstimator, is_classifier, is_regressor
 from sklearn.metrics import (
     roc_auc_score,
     accuracy_score,
@@ -19,11 +19,17 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         self,
         data: Optional[Data] = None,
         clf: Optional[BaseEstimator] = None,
+        estimator: Optional[BaseEstimator] = None,
         description: Optional[str] = None,
         short_description: Optional[str] = None,
     ):
+        # Accept either clf or estimator parameter, not both
+        if clf is not None and estimator is not None:
+            raise ValueError("Provide either 'clf' or 'estimator' parameter, not both.")
+
         self._data = data
-        self._clf = clf
+        # Store in _clf for backward compatibility with existing pickles
+        self._clf = estimator if estimator is not None else clf
         self._description = description
         self._short_description = short_description
 
@@ -37,11 +43,21 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
 
     @property
     def clf(self) -> Optional[BaseEstimator]:
+        """Classifier/estimator (backward compatible property)."""
         return self._clf
 
     @clf.setter
     def clf(self, clf: BaseEstimator) -> None:
         self._clf = clf
+
+    @property
+    def estimator(self) -> Optional[BaseEstimator]:
+        """Generic estimator property (supports classifiers, regressors, and transformers)."""
+        return self._clf
+
+    @estimator.setter
+    def estimator(self, estimator: BaseEstimator) -> None:
+        self._clf = estimator
 
     @property
     def description(self) -> Optional[str]:
@@ -59,6 +75,19 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
     def short_description(self, short_description: str) -> None:
         self._short_description = short_description
 
+    def _get_estimator_type(
+        self,
+    ) -> Optional[Literal["classifier", "regressor", "transformer"]]:
+        """Determine the type of the estimator."""
+        if self._clf is None:
+            return None
+        if is_classifier(self._clf):
+            return "classifier"
+        elif is_regressor(self._clf):
+            return "regressor"
+        else:
+            return "transformer"
+
     @property
     def hash(self) -> str:
         # Serialize the classifier to a byte stream
@@ -69,16 +98,72 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
 
     def fit(self) -> None:
         if self._data is None:
-            raise ValueError("No data provided to fit the classifier.")
+            raise ValueError("No data provided to fit the estimator.")
         if self._clf is None:
-            raise ValueError("No classifier provided to fit the data.")
+            raise ValueError("No estimator provided to fit the data.")
 
-        self._clf.fit(self._data.X_train, self._data.y_train)
+        estimator_type = self._get_estimator_type()
+
+        # Transformers only need X data, no labels
+        if estimator_type == "transformer":
+            self._clf.fit(self._data.X_train)
+        else:
+            # Classifiers and regressors need both X and y
+            self._clf.fit(self._data.X_train, self._data.y_train)
 
     def predict(self, data):
+        if self._clf is None:
+            raise ValueError("No estimator provided.")
+
+        estimator_type = self._get_estimator_type()
+        if estimator_type == "transformer":
+            raise TypeError(
+                "Cannot call predict() on a transformer. Use transform() instead."
+            )
+
         return self._clf.predict(data)
 
+    def transform(self, data):
+        """Transform data using a fitted transformer.
+
+        Args:
+            data: Data to transform
+
+        Returns:
+            Transformed data
+
+        Raises:
+            ValueError: If no estimator is provided or estimator is not fitted
+            TypeError: If estimator is not a transformer
+        """
+        if self._clf is None:
+            raise ValueError("No estimator provided.")
+
+        estimator_type = self._get_estimator_type()
+        if estimator_type != "transformer":
+            raise TypeError(
+                f"Cannot call transform() on a {estimator_type}. "
+                "This method is only available for transformers."
+            )
+
+        if not hasattr(self._clf, "transform"):
+            raise AttributeError("The estimator does not have a transform method.")
+
+        return self._clf.transform(data)
+
     def predict_proba(self, data):
+        if self._clf is None:
+            raise ValueError("No estimator provided.")
+
+        estimator_type = self._get_estimator_type()
+        if estimator_type == "transformer":
+            raise TypeError("Cannot call predict_proba() on a transformer.")
+        elif estimator_type == "regressor":
+            raise TypeError(
+                "Cannot call predict_proba() on a regressor. "
+                "Probability predictions are only available for classifiers."
+            )
+
         if hasattr(self._clf, "predict_proba"):
             return self._clf.predict_proba(data)
         else:
@@ -88,9 +173,21 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
 
     def evaluate(self, X_test: Optional = None, y_test: Optional = None) -> dict:
         if X_test is None and y_test is None and not self._data:
-            raise ValueError("No data provided to evaluate the classifier.")
+            raise ValueError("No data provided to evaluate the estimator.")
         if not self._clf:
-            raise ValueError("No classifier provided to evaluate.")
+            raise ValueError("No estimator provided to evaluate.")
+
+        estimator_type = self._get_estimator_type()
+        if estimator_type == "transformer":
+            raise TypeError(
+                "Cannot evaluate() a transformer. "
+                "Evaluation metrics are only available for classifiers and regressors."
+            )
+        elif estimator_type == "regressor":
+            raise NotImplementedError(
+                "Evaluation for regressors is not yet implemented. "
+                "Currently only classifiers are supported."
+            )
 
         if X_test is None and y_test is None:
             X_test = self._data.X_test
@@ -143,20 +240,28 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         feature_list = ", ".join(
             self._data.features
         )  # Get features from the Data class
-        num_classes = len(self._data.classes)  # Get number of unique classes
-        class_list = ", ".join(
-            map(str, self._data.classes)
-        )  # Unique classes as a string
 
-        return {
+        estimator_type = self._get_estimator_type()
+
+        summary_dict = {
             "model_code": self._short_description,
             "model_description": self._description,
             "model_hash": self.hash,
+            "estimator_type": estimator_type,
             "data_code": self._data.short_description,
             "data_description": self._data.description,
             "data_hash": self._data.hash,
             "num_features": num_features,
             "features": feature_list,
-            "num_classes": num_classes,
-            "classes": class_list,
         }
+
+        # Only include class information for classifiers
+        if estimator_type == "classifier" and self._data.classes is not None:
+            num_classes = len(self._data.classes)  # Get number of unique classes
+            class_list = ", ".join(
+                map(str, self._data.classes)
+            )  # Unique classes as a string
+            summary_dict["num_classes"] = num_classes
+            summary_dict["classes"] = class_list
+
+        return summary_dict
