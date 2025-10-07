@@ -68,6 +68,66 @@ if __name__ == "__main__":
     cs_model.to_pickle("./tmp/iris_model.pkl.gz")
 ```
 
+### Using Transformers with ColdSnap
+
+ColdSnap also supports sklearn transformers like `StandardScaler`, `PCA`, etc. This is useful for saving fitted
+preprocessing pipelines along with your data. The example below shows how to fit a `StandardScaler` and save it as a snapshot.
+
+```python
+from coldsnap import Data, Model
+
+from sklearn import datasets
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
+import os
+
+iris = datasets.load_iris(as_frame=True)
+iris_df = pd.merge(
+    iris.data, iris.target, how="inner", left_index=True, right_index=True
+)
+
+if __name__ == "__main__":
+    try:
+        os.mkdir("./tmp/")
+    except FileExistsError:
+        pass
+
+    # Create data object
+    cs_data = Data.from_df(
+        iris_df, "target", random_state=1910, description="Iris Dataset"
+    )
+
+    # Create a StandardScaler transformer
+    scaler = StandardScaler()
+
+    # Create a Model with the transformer using the 'estimator' parameter
+    cs_scaler_model = Model(
+        data=cs_data,
+        estimator=scaler,
+        description="StandardScaler for Iris dataset",
+    )
+
+    # Fit the scaler
+    cs_scaler_model.fit()
+
+    # Transform the training data
+    X_train_scaled = cs_scaler_model.transform(cs_data.X_train)
+
+    print("Original data (first 3 samples):")
+    print(cs_data.X_train.head(3))
+    print("\nScaled data (first 3 samples):")
+    print(pd.DataFrame(X_train_scaled, columns=cs_data.features).head(3))
+
+    # Save the fitted transformer
+    cs_scaler_model.to_pickle("./tmp/iris_scaler.pkl.gz")
+
+    # Later, you can load and use it on new data
+    loaded_scaler = Model.from_pickle("./tmp/iris_scaler.pkl.gz")
+    X_test_scaled = loaded_scaler.transform(cs_data.X_test)
+
+    print("\nTransformer successfully saved and loaded!")
+```
+
 ### Loading a Model
 
 Once a model has been stored, it can easily be loaded using `Model.from_pickle(path)`. Once loaded,
