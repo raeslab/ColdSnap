@@ -126,11 +126,15 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
     def transform(self, data):
         """Transform data using a fitted transformer.
 
+        When the input is a pandas DataFrame, the output will preserve the DataFrame
+        structure including index and column names. This is achieved using scikit-learn's
+        set_output API (available in scikit-learn >= 1.2).
+
         Args:
-            data: Data to transform
+            data: Data to transform (pandas DataFrame or array-like)
 
         Returns:
-            Transformed data
+            Transformed data (pandas DataFrame if input is DataFrame, otherwise array)
 
         Raises:
             ValueError: If no estimator is provided or estimator is not fitted
@@ -148,6 +152,13 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
 
         if not hasattr(self._clf, "transform"):
             raise AttributeError("The estimator does not have a transform method.")
+
+        # Preserve DataFrame structure if input is a DataFrame
+        import pandas as pd
+
+        if isinstance(data, pd.DataFrame):
+            # Configure transformer to output pandas DataFrames
+            self._clf.set_output(transform="pandas")
 
         return self._clf.transform(data)
 

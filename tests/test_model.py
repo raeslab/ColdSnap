@@ -286,7 +286,8 @@ def test_transformer_workflow(sample_dataframe):
 
     assert X_transformed.shape == model.data.X_train.shape
     # StandardScaler should produce mean ~0 and std ~1
-    assert abs(X_transformed.mean()) < 0.1
+    # X_transformed is now a DataFrame, so mean() returns a Series
+    assert (abs(X_transformed.mean()) < 0.1).all()
 
 
 def test_transform_without_estimator(sample_dataframe):
@@ -376,6 +377,139 @@ def test_classifier_cannot_transform(sample_dataframe):
 
     with pytest.raises(TypeError, match="Cannot call transform.*classifier"):
         model.transform(model.data.X_test)
+
+
+# Tests for DataFrame preservation in transform()
+def test_transform_preserves_dataframe_structure(sample_dataframe):
+    """Test that transform() preserves DataFrame index and column names."""
+    import pandas as pd
+    from sklearn.preprocessing import StandardScaler
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+    model.fit()
+
+    # Get original DataFrame with its index and columns
+    X_original = model.data.X_train
+
+    # Transform the data
+    X_transformed = model.transform(X_original)
+
+    # Verify it's a DataFrame
+    assert isinstance(X_transformed, pd.DataFrame), "Output should be a DataFrame"
+
+    # Verify index is preserved
+    assert X_transformed.index.equals(X_original.index), (
+        "DataFrame index should be preserved"
+    )
+
+    # Verify column names are preserved
+    assert list(X_transformed.columns) == list(X_original.columns), (
+        "Column names should be preserved"
+    )
+
+    # Verify shape is the same
+    assert X_transformed.shape == X_original.shape
+
+
+def test_transform_with_numpy_array_input(sample_dataframe):
+    """Test that transform() still works with NumPy array input."""
+    import numpy as np
+    from sklearn.preprocessing import StandardScaler
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+    model.fit()
+
+    # Convert to NumPy array
+    X_array = model.data.X_train.values
+
+    # Transform should work with NumPy arrays
+    X_transformed = model.transform(X_array)
+
+    # Output should be NumPy array (not DataFrame) when input is array
+    assert isinstance(X_transformed, np.ndarray), "Output should be NumPy array"
+    assert X_transformed.shape == X_array.shape
+
+
+def test_transform_preserves_custom_index(sample_dataframe):
+    """Test that transform() preserves custom DataFrame indices."""
+    import pandas as pd
+    from sklearn.preprocessing import StandardScaler
+
+    # Create DataFrame with custom index
+    df = sample_dataframe.copy()
+    custom_index = [f"sample_{i}" for i in range(len(df))]
+    df.index = custom_index
+
+    data_instance = Data.from_df(df, "label", test_size=0.2, random_state=42)
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+    model.fit()
+
+    X_transformed = model.transform(model.data.X_train)
+
+    # Verify custom index is preserved
+    assert isinstance(X_transformed, pd.DataFrame)
+    assert X_transformed.index.equals(model.data.X_train.index)
+
+
+def test_transform_with_column_reducing_transformer(sample_dataframe):
+    """Test DataFrame preservation with transformers that reduce columns (e.g., PCA)."""
+    import pandas as pd
+    from sklearn.decomposition import PCA
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    pca = PCA(n_components=1)  # Reduce to 1 component
+    model = Model(data=data_instance, estimator=pca)
+    model.fit()
+
+    X_original = model.data.X_train
+    X_transformed = model.transform(X_original)
+
+    # Verify it's a DataFrame
+    assert isinstance(X_transformed, pd.DataFrame)
+
+    # Verify index is preserved even though columns changed
+    assert X_transformed.index.equals(X_original.index)
+
+    # Verify output has expected number of components
+    assert X_transformed.shape[1] == 1
+    assert X_transformed.shape[0] == X_original.shape[0]
+
+
+def test_transform_with_column_expanding_transformer(sample_dataframe):
+    """Test DataFrame preservation with transformers that add columns (e.g., PolynomialFeatures)."""
+    import pandas as pd
+    from sklearn.preprocessing import PolynomialFeatures
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    poly = PolynomialFeatures(degree=2, include_bias=False)
+    model = Model(data=data_instance, estimator=poly)
+    model.fit()
+
+    X_original = model.data.X_train
+    X_transformed = model.transform(X_original)
+
+    # Verify it's a DataFrame
+    assert isinstance(X_transformed, pd.DataFrame)
+
+    # Verify index is preserved
+    assert X_transformed.index.equals(X_original.index)
+
+    # Verify output has more columns than input
+    assert X_transformed.shape[1] > X_original.shape[1]
+    assert X_transformed.shape[0] == X_original.shape[0]
 
 
 # Tests for regressor support

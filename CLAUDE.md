@@ -119,6 +119,11 @@ scaler_model = Model(data=data, estimator=StandardScaler())
 scaler_model.fit()
 X_scaled = scaler_model.transform(data.X_train)
 
+# DataFrame structure is automatically preserved!
+# X_scaled maintains the same index and column names as data.X_train
+print(X_scaled.index)  # Original index preserved
+print(X_scaled.columns)  # Original column names preserved
+
 # Save the fitted transformer with data
 scaler_model.to_pickle("scaler_snapshot.pkl.gz")
 
@@ -126,6 +131,13 @@ scaler_model.to_pickle("scaler_snapshot.pkl.gz")
 loaded_scaler = Model.from_pickle("scaler_snapshot.pkl.gz")
 X_new_scaled = loaded_scaler.transform(X_new)
 ```
+
+**DataFrame Preservation**: When you pass a pandas DataFrame to `transform()`, the output automatically preserves:
+- **Row index**: Original DataFrame indices are maintained
+- **Column names**: Original column headers are preserved (for transformers that don't change column count like StandardScaler, MinMaxScaler)
+- **Column tracking**: Even transformers that change columns (PCA, PolynomialFeatures) return DataFrames with appropriate column names
+
+This feature uses scikit-learn's `set_output` API (available since v1.5.2+) and works with all standard transformers.
 
 ### Working with Regressors (New)
 
@@ -196,3 +208,4 @@ src/coldsnap/
 4. Both ruff and pytest actions can auto-commit fixes when needed
 - always run ruff check and ruff format to fix linting and formating errors when making major changes to python code (.py files)
 - when writing a commit message (for git) don't include emoji, don't mention Claude, Claude code or Antropic
+- Don't use emojis in descriptions or titles for github tags and releases
