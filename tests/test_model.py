@@ -696,3 +696,121 @@ def test_classifier_summary_includes_classes(sample_dataframe):
     assert "num_classes" in summary
     assert "classes" in summary
     assert summary["num_classes"] == 3  # From sample_dataframe fixture
+
+
+# Tests for features property
+def test_features_from_fitted_classifier(sample_dataframe):
+    """Test that features property uses feature_names_in_ from fitted estimator."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, estimator=clf)
+
+    # After fitting, should use estimator's feature_names_in_
+    model.fit()
+    features = model.features
+
+    assert features is not None
+    assert isinstance(features, list)
+    assert len(features) == 2  # feature1 and feature2
+    assert set(features) == {"feature1", "feature2"}
+    # Verify it matches sklearn's feature_names_in_
+    assert features == list(model.estimator.feature_names_in_)
+
+
+def test_features_before_fitting(sample_dataframe):
+    """Test that features property falls back to Data.features before fitting."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, estimator=clf)
+
+    # Before fitting, should fall back to Data.features
+    features = model.features
+
+    assert features is not None
+    assert isinstance(features, list)
+    assert features == data_instance.features
+    assert set(features) == {"feature1", "feature2"}
+
+
+def test_features_without_data_object(sample_dataframe):
+    """Test that features property returns None without Data object."""
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(estimator=clf)
+
+    # Without data and without fitted estimator, should return None
+    features = model.features
+
+    assert features is None
+
+
+def test_features_with_transformer(sample_dataframe):
+    """Test that features property works with transformers."""
+    from sklearn.preprocessing import StandardScaler
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    scaler = StandardScaler()
+    model = Model(data=data_instance, estimator=scaler)
+
+    # Before fitting
+    features_before = model.features
+    assert features_before == data_instance.features
+
+    # After fitting
+    model.fit()
+    features_after = model.features
+
+    assert features_after is not None
+    assert isinstance(features_after, list)
+    assert features_after == list(model.estimator.feature_names_in_)
+    assert set(features_after) == {"feature1", "feature2"}
+
+
+def test_features_with_pca_transformer(sample_dataframe):
+    """Test that features property works with PCA (column-reducing transformer)."""
+    from sklearn.decomposition import PCA
+
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    pca = PCA(n_components=1)
+    model = Model(data=data_instance, estimator=pca)
+
+    # Before fitting
+    features_before = model.features
+    assert features_before == data_instance.features
+    assert len(features_before) == 2
+
+    # After fitting, PCA still has feature_names_in_ (input features)
+    model.fit()
+    features_after = model.features
+
+    assert features_after is not None
+    assert len(features_after) == 2  # Input features, not output components
+    assert set(features_after) == {"feature1", "feature2"}
+
+
+def test_features_property_consistency(sample_dataframe):
+    """Test that features property is consistent throughout model lifecycle."""
+    data_instance = Data.from_df(
+        sample_dataframe, "label", test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(data=data_instance, estimator=clf)
+
+    # Before fit: should match Data.features
+    features_before = model.features
+    assert features_before == data_instance.features
+
+    # After fit: should match estimator.feature_names_in_
+    model.fit()
+    features_after = model.features
+    assert features_after == list(model.estimator.feature_names_in_)
+
+    # Both should have the same content (though prioritization differs)
+    assert set(features_before) == set(features_after)

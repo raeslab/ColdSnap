@@ -116,7 +116,7 @@ if __name__ == "__main__":
     print("Original data (first 3 samples):")
     print(cs_data.X_train.head(3))
     print("\nScaled data (first 3 samples):")
-    print(pd.DataFrame(X_train_scaled, columns=cs_data.features).head(3))
+    print(X_train_scaled.head(3))  # DataFrame structure is preserved automatically
 
     # Save the fitted transformer
     cs_scaler_model.to_pickle("./tmp/iris_scaler.pkl.gz")

@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from sklearn.base import BaseEstimator, is_classifier, is_regressor
 from sklearn.metrics import (
     roc_auc_score,
@@ -276,3 +276,16 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
             summary_dict["classes"] = class_list
 
         return summary_dict
+
+    @property
+    def features(self) -> Optional[List[str]]:
+        """Get feature names, preferring sklearn's feature_names_in_ over Data object."""
+        # First try to get from fitted estimator (most reliable)
+        if self._clf is not None and hasattr(self._clf, "feature_names_in_"):
+            return list(self._clf.feature_names_in_)
+
+        # Fall back to Data object if available
+        if self._data is not None and hasattr(self._data, "features"):
+            return self._data.features
+
+        return None
