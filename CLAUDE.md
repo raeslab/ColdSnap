@@ -139,7 +139,7 @@ X_new_scaled = loaded_scaler.transform(X_new)
 
 This feature uses scikit-learn's `set_output` API (available since v1.5.2+) and works with all standard transformers.
 
-### Working with Regressors (New)
+### Working with Regressors
 
 ```python
 from sklearn.linear_model import LinearRegression
@@ -155,8 +155,12 @@ reg_model = Model(data=data, estimator=LinearRegression())
 reg_model.fit()
 predictions = reg_model.predict(data.X_test)
 
-# Note: evaluate() not yet implemented for regressors
-# model.evaluate()  # Would raise NotImplementedError
+# Evaluate with regression metrics
+metrics = reg_model.evaluate()
+print(f"RMSE: {metrics['rmse']:.4f}")
+print(f"MAE: {metrics['mae']:.4f}")
+print(f"R2 Score: {metrics['r2']:.4f}")
+print(f"MSE: {metrics['mse']:.4f}")
 ```
 
 ### Backward Compatibility

@@ -551,8 +551,8 @@ def test_regressor_cannot_predict_proba(sample_dataframe):
         model.predict_proba(model.data.X_test)
 
 
-def test_regressor_evaluate_not_implemented(sample_dataframe):
-    """Test that regressor evaluate() raises NotImplementedError."""
+def test_regressor_evaluate_works(sample_dataframe):
+    """Test that regressor evaluate() returns regression metrics."""
     from sklearn.linear_model import LinearRegression
 
     df = sample_dataframe.copy()
@@ -564,8 +564,18 @@ def test_regressor_evaluate_not_implemented(sample_dataframe):
     model = Model(data=data_instance, estimator=regressor)
     model.fit()
 
-    with pytest.raises(NotImplementedError, match="Evaluation for regressors"):
-        model.evaluate()
+    metrics = model.evaluate()
+
+    # Should return regression metrics, not classification metrics
+    assert isinstance(metrics, dict)
+    assert "rmse" in metrics
+    assert "mae" in metrics
+    assert "r2" in metrics
+    assert "mse" in metrics
+    # Should not have classification metrics
+    assert "accuracy" not in metrics
+    assert "precision" not in metrics
+    assert "recall" not in metrics
 
 
 # Tests for backward compatibility

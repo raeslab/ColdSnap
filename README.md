@@ -128,6 +128,67 @@ if __name__ == "__main__":
     print("\nTransformer successfully saved and loaded!")
 ```
 
+### Using Regressors with ColdSnap
+
+ColdSnap supports sklearn regression models like `LinearRegression`, `Ridge`, `RandomForestRegressor`, etc.
+Regressors work similarly to classifiers but return regression-specific evaluation metrics (RMSE, MAE, R2, MSE).
+
+```python
+from coldsnap import Data, Model
+
+from sklearn import datasets
+from sklearn.linear_model import LinearRegression
+import pandas as pd
+import os
+
+# Load the iris dataset for regression
+iris = datasets.load_iris(as_frame=True)
+iris_df = pd.merge(
+    iris.data, iris.target, how="inner", left_index=True, right_index=True
+)
+# Drop the target column as we'll predict petal width from other features
+iris_df = iris_df.drop(columns=["target"])
+
+if __name__ == "__main__":
+    try:
+        os.mkdir("./tmp/")
+    except FileExistsError:
+        pass
+
+    # Create data object for regression - predict petal width from other measurements
+    cs_data = Data.from_df(
+        iris_df, "petal width (cm)", random_state=1910, description="Iris Petal Width Regression"
+    )
+
+    # Create a LinearRegression model
+    regressor = LinearRegression()
+
+    cs_model = Model(
+        data=cs_data,
+        estimator=regressor,
+        description="LinearRegression predicting petal width on Iris dataset",
+    )
+
+    # Fit the model
+    cs_model.fit()
+
+    # Evaluate with regression metrics
+    metrics = cs_model.evaluate()
+    print("Regression Metrics:")
+    print(f"  RMSE: {metrics['rmse']:.4f}")
+    print(f"  MAE: {metrics['mae']:.4f}")
+    print(f"  R2 Score: {metrics['r2']:.4f}")
+    print(f"  MSE: {metrics['mse']:.4f}")
+
+    # Make predictions
+    predictions = cs_model.predict(cs_data.X_test)
+
+    # Save the model
+    cs_model.to_pickle("./tmp/iris_regressor.pkl.gz")
+
+    print("\nRegressor successfully trained, evaluated, and saved!")
+```
+
 ### Loading a Model
 
 Once a model has been stored, it can easily be loaded using `Model.from_pickle(path)`. Once loaded,

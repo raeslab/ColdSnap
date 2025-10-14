@@ -6,6 +6,10 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
+    mean_squared_error,
+    mean_absolute_error,
+    r2_score,
+    root_mean_squared_error,
 )
 from .data import Data
 from .serializable import Serializable
@@ -194,11 +198,6 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
                 "Cannot evaluate() a transformer. "
                 "Evaluation metrics are only available for classifiers and regressors."
             )
-        elif estimator_type == "regressor":
-            raise NotImplementedError(
-                "Evaluation for regressors is not yet implemented. "
-                "Currently only classifiers are supported."
-            )
 
         if X_test is None and y_test is None:
             X_test = self._data.X_test
@@ -209,6 +208,18 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
             )
 
         y_pred = self._clf.predict(X_test)
+
+        # Handle regression metrics
+        if estimator_type == "regressor":
+            metrics = {
+                "rmse": root_mean_squared_error(y_test, y_pred),
+                "mae": mean_absolute_error(y_test, y_pred),
+                "r2": r2_score(y_test, y_pred),
+                "mse": mean_squared_error(y_test, y_pred),
+            }
+            return metrics
+
+        # Handle classification metrics
         y_proba = (
             self._clf.predict_proba(X_test)
             if hasattr(self._clf, "predict_proba")
