@@ -29,18 +29,15 @@ def test_data_initialization(sample_dataframe):
 
 
 def test_from_df(sample_dataframe):
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
 
     assert isinstance(data_instance, Data)
     assert (
-        data_instance.X_train.shape[0] + data_instance.X_test.shape[0]
-        == sample_dataframe.shape[0]
+        data_instance.X_train.shape[0] + data_instance.X_test.shape[0] == sample_dataframe.shape[0]
     )
-    assert set(data_instance.y_train.unique()).union(
-        data_instance.y_test.unique()
-    ) == set(sample_dataframe["label"])
+    assert set(data_instance.y_train.unique()).union(data_instance.y_test.unique()) == set(
+        sample_dataframe["label"]
+    )
 
     assert isinstance(data_instance.hash, str)
 
@@ -69,21 +66,15 @@ def test_serialization(sample_dataframe, tmp_path):
 
 
 def test_features_property(sample_dataframe):
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     expected_features = list(data_instance.X_train.columns)
 
     assert data_instance.features == expected_features
 
 
 def test_classes_property(sample_dataframe):
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
-    expected_classes = set(
-        data_instance.y_train.tolist() + data_instance.y_test.tolist()
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
+    expected_classes = set(data_instance.y_train.tolist() + data_instance.y_test.tolist())
 
     assert all(cls in expected_classes for cls in data_instance.classes)
 
@@ -109,9 +100,7 @@ def test_data_init_inconsistent_lengths_train():
     X_test = pd.DataFrame([[5, 6]])
     y_test = pd.Series([1])
 
-    with pytest.raises(
-        ValueError, match="Inconsistent data lengths between X and y splits."
-    ):
+    with pytest.raises(ValueError, match="Inconsistent data lengths between X and y splits."):
         Data(X_train, y_train, X_test, y_test)
 
 
@@ -122,16 +111,12 @@ def test_data_init_inconsistent_lengths_test():
     X_test = pd.DataFrame([[5, 6]])
     y_test = pd.Series([1, 0])  # Incorrect length
 
-    with pytest.raises(
-        ValueError, match="Inconsistent data lengths between X and y splits."
-    ):
+    with pytest.raises(ValueError, match="Inconsistent data lengths between X and y splits."):
         Data(X_train, y_train, X_test, y_test)
 
 
 def test_purge(sample_dataframe):
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
 
     # Ensure initial data is not empty
     assert not data_instance.X_train.empty

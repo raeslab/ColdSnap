@@ -8,9 +8,7 @@ import pandas as pd
 import os
 
 iris = datasets.load_iris(as_frame=True)
-iris_df = pd.merge(
-    iris.data, iris.target, how="inner", left_index=True, right_index=True
-)
+iris_df = pd.merge(iris.data, iris.target, how="inner", left_index=True, right_index=True)
 
 if __name__ == "__main__":
     try:

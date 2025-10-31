@@ -64,7 +64,5 @@ def test_type_mismatch_deserialization(tmp_path):
         pickle.dump(incorrect_obj, f)
 
     # Test deserialization with type mismatch
-    with pytest.raises(
-        IOError, match="The loaded object is not an instance of MockSerializable"
-    ):
+    with pytest.raises(IOError, match="The loaded object is not an instance of MockSerializable"):
         MockSerializable.from_pickle(path)

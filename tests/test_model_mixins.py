@@ -29,15 +29,11 @@ def test_confusion_matrix_no_data():
 
 def test_confusion_matrix_no_classifier(sample_dataframe):
     # Initialize Model with data but no classifier
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model_without_clf = Model(data=data_instance)
 
     # Attempt to call confusion_matrix without classifier
-    with pytest.raises(
-        ValueError, match="No estimator provided to perform predictions."
-    ):
+    with pytest.raises(ValueError, match="No estimator provided to perform predictions."):
         model_without_clf.confusion_matrix()
 
 
@@ -62,15 +58,11 @@ def test_display_confusion_matrix_no_data():
 
 def test_display_confusion_matrix_no_classifier(sample_dataframe):
     # Initialize Model with data but no classifier
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model_without_clf = Model(data=data_instance)
 
     # Attempt to call display_confusion_matrix without classifier
-    with pytest.raises(
-        ValueError, match="No estimator provided to perform predictions."
-    ):
+    with pytest.raises(ValueError, match="No estimator provided to perform predictions."):
         model_without_clf.display_confusion_matrix()
 
 
@@ -84,14 +76,10 @@ def test_display_roc_curve_no_data():
 
 def test_display_roc_curve_no_classifier(sample_dataframe):
     # Initialize Model with data but no classifier
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model_without_clf = Model(data=data_instance)
 
-    with pytest.raises(
-        ValueError, match="No estimator provided to perform predictions."
-    ):
+    with pytest.raises(ValueError, match="No estimator provided to perform predictions."):
         model_without_clf.display_roc_curve()
 
 
@@ -131,9 +119,7 @@ def test_display_shap_beeswarm(model_instance):
 def test_display_shap_beeswarm_no_data_clf(model_instance):
     model_instance.clf = None
 
-    with pytest.raises(
-        ValueError, match="No estimator provided to perform predictions."
-    ):
+    with pytest.raises(ValueError, match="No estimator provided to perform predictions."):
         model_instance.display_shap_beeswarm()
 
     model_instance.data = None
@@ -146,9 +132,7 @@ def test_confusion_matrix_rejects_transformer(sample_dataframe):
     """Test that confusion_matrix raises TypeError for transformers."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()
@@ -161,9 +145,7 @@ def test_display_roc_curve_rejects_transformer(sample_dataframe):
     """Test that display_roc_curve raises TypeError for transformers."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()
@@ -176,9 +158,7 @@ def test_display_shap_beeswarm_rejects_transformer(sample_dataframe):
     """Test that display_shap_beeswarm raises TypeError for transformers."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()

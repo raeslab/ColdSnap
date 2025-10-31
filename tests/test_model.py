@@ -111,9 +111,7 @@ def test_fit_without_data():
 
 def test_fit_without_classifier(sample_dataframe):
     # Initialize Model with data but no classifier
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model_without_clf = Model(data=data_instance)
 
     # Attempt to fit without a classifier
@@ -148,9 +146,7 @@ def test_evaluate_without_data():
 
 def test_evaluate_without_classifier(sample_dataframe):
     # Initialize Model with data but no classifier
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model_without_clf = Model(data=data_instance)
 
     # Attempt to evaluate without a classifier
@@ -163,9 +159,7 @@ def test_predict(model_instance):
     model_instance.fit()
     X_test = model_instance.data.X_test
     predictions = model_instance.predict(X_test)
-    assert len(predictions) == len(X_test), (
-        "Prediction length does not match test data length."
-    )
+    assert len(predictions) == len(X_test), "Prediction length does not match test data length."
     assert set(predictions).issubset(set(model_instance.data.y_train.unique())), (
         "Predictions contain unexpected classes."
     )
@@ -173,9 +167,7 @@ def test_predict(model_instance):
 
 def test_predict_without_estimator(sample_dataframe):
     # Test predict raises error when no estimator is set
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model = Model(data=data_instance)
 
     with pytest.raises(ValueError, match="No estimator provided."):
@@ -210,9 +202,7 @@ def test_predict_proba_not_supported(model_instance_svc):
 
 def test_predict_proba_without_estimator(sample_dataframe):
     # Test predict_proba raises error when no estimator is set
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model = Model(data=data_instance)
 
     with pytest.raises(ValueError, match="No estimator provided."):
@@ -249,9 +239,9 @@ def test_summary(model_instance):
     assert set(summary["features"].split(", ")) == set(model_instance.data.features), (
         "Features in summary do not match."
     )
-    assert set(summary["classes"].split(", ")) == set(
-        map(str, model_instance.data.classes)
-    ), "Classes in summary do not match."
+    assert set(summary["classes"].split(", ")) == set(map(str, model_instance.data.classes)), (
+        "Classes in summary do not match."
+    )
 
     model_instance._data = None
     with pytest.raises(ValueError, match="No data available for summary."):
@@ -272,9 +262,7 @@ def test_transformer_workflow(sample_dataframe):
     """Test that transformers work correctly with fit and transform."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
 
@@ -292,9 +280,7 @@ def test_transformer_workflow(sample_dataframe):
 
 def test_transform_without_estimator(sample_dataframe):
     """Test that transform raises error when no estimator is set."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     model = Model(data=data_instance)
 
     with pytest.raises(ValueError, match="No estimator provided."):
@@ -310,9 +296,7 @@ def test_transform_estimator_without_transform_method(sample_dataframe):
         def fit(self, X, y=None):
             return self
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     mock_transformer = MockTransformer()
     model = Model(data=data_instance, estimator=mock_transformer)
     model.fit()
@@ -325,9 +309,7 @@ def test_transformer_cannot_predict(sample_dataframe):
     """Test that transformers cannot use predict()."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()
@@ -340,9 +322,7 @@ def test_transformer_cannot_predict_proba(sample_dataframe):
     """Test that transformers cannot use predict_proba()."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()
@@ -355,9 +335,7 @@ def test_transformer_cannot_evaluate(sample_dataframe):
     """Test that transformers cannot use evaluate()."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()
@@ -368,9 +346,7 @@ def test_transformer_cannot_evaluate(sample_dataframe):
 
 def test_classifier_cannot_transform(sample_dataframe):
     """Test that classifiers cannot use transform()."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, estimator=clf)
     model.fit()
@@ -385,9 +361,7 @@ def test_transform_preserves_dataframe_structure(sample_dataframe):
     import pandas as pd
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()
@@ -402,9 +376,7 @@ def test_transform_preserves_dataframe_structure(sample_dataframe):
     assert isinstance(X_transformed, pd.DataFrame), "Output should be a DataFrame"
 
     # Verify index is preserved
-    assert X_transformed.index.equals(X_original.index), (
-        "DataFrame index should be preserved"
-    )
+    assert X_transformed.index.equals(X_original.index), "DataFrame index should be preserved"
 
     # Verify column names are preserved
     assert list(X_transformed.columns) == list(X_original.columns), (
@@ -420,9 +392,7 @@ def test_transform_with_numpy_array_input(sample_dataframe):
     import numpy as np
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()
@@ -465,9 +435,7 @@ def test_transform_with_column_reducing_transformer(sample_dataframe):
     import pandas as pd
     from sklearn.decomposition import PCA
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     pca = PCA(n_components=1)  # Reduce to 1 component
     model = Model(data=data_instance, estimator=pca)
     model.fit()
@@ -491,9 +459,7 @@ def test_transform_with_column_expanding_transformer(sample_dataframe):
     import pandas as pd
     from sklearn.preprocessing import PolynomialFeatures
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     poly = PolynomialFeatures(degree=2, include_bias=False)
     model = Model(data=data_instance, estimator=poly)
     model.fit()
@@ -581,9 +547,7 @@ def test_regressor_evaluate_works(sample_dataframe):
 # Tests for backward compatibility
 def test_clf_parameter_still_works(sample_dataframe):
     """Test that the original clf parameter still works."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, clf=clf)
 
@@ -595,9 +559,7 @@ def test_clf_parameter_still_works(sample_dataframe):
 
 def test_estimator_parameter_works(sample_dataframe):
     """Test that the new estimator parameter works."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, estimator=clf)
 
@@ -609,9 +571,7 @@ def test_estimator_parameter_works(sample_dataframe):
 
 def test_cannot_provide_both_clf_and_estimator(sample_dataframe):
     """Test that providing both clf and estimator raises an error."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
 
     with pytest.raises(ValueError, match="either 'clf' or 'estimator'"):
@@ -620,9 +580,7 @@ def test_cannot_provide_both_clf_and_estimator(sample_dataframe):
 
 def test_clf_property_works(sample_dataframe):
     """Test that the clf property still works for backward compatibility."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, estimator=clf)
 
@@ -633,9 +591,7 @@ def test_clf_property_works(sample_dataframe):
 
 def test_estimator_property_works(sample_dataframe):
     """Test that the estimator property works."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, clf=clf)
 
@@ -649,9 +605,7 @@ def test_get_estimator_type(sample_dataframe):
     from sklearn.preprocessing import StandardScaler
     from sklearn.linear_model import LinearRegression
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
 
     # Test classifier
     clf_model = Model(data=data_instance, estimator=RandomForestClassifier())
@@ -674,9 +628,7 @@ def test_transformer_summary(sample_dataframe):
     """Test that summary works for transformers and doesn't include class info."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
     model.fit()
@@ -692,9 +644,7 @@ def test_transformer_summary(sample_dataframe):
 
 def test_classifier_summary_includes_classes(sample_dataframe):
     """Test that summary for classifiers still includes class info."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, estimator=clf)
     model.fit()
@@ -711,9 +661,7 @@ def test_classifier_summary_includes_classes(sample_dataframe):
 # Tests for features property
 def test_features_from_fitted_classifier(sample_dataframe):
     """Test that features property uses feature_names_in_ from fitted estimator."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, estimator=clf)
 
@@ -731,9 +679,7 @@ def test_features_from_fitted_classifier(sample_dataframe):
 
 def test_features_before_fitting(sample_dataframe):
     """Test that features property falls back to Data.features before fitting."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, estimator=clf)
 
@@ -761,9 +707,7 @@ def test_features_with_transformer(sample_dataframe):
     """Test that features property works with transformers."""
     from sklearn.preprocessing import StandardScaler
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     scaler = StandardScaler()
     model = Model(data=data_instance, estimator=scaler)
 
@@ -785,9 +729,7 @@ def test_features_with_pca_transformer(sample_dataframe):
     """Test that features property works with PCA (column-reducing transformer)."""
     from sklearn.decomposition import PCA
 
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     pca = PCA(n_components=1)
     model = Model(data=data_instance, estimator=pca)
 
@@ -807,9 +749,7 @@ def test_features_with_pca_transformer(sample_dataframe):
 
 def test_features_property_consistency(sample_dataframe):
     """Test that features property is consistent throughout model lifecycle."""
-    data_instance = Data.from_df(
-        sample_dataframe, "label", test_size=0.2, random_state=42
-    )
+    data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
     clf = RandomForestClassifier(random_state=42)
     model = Model(data=data_instance, estimator=clf)
 
