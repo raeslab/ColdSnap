@@ -16,11 +16,11 @@ setup(
         "Bug Tracker": "https://github.com/raeslab/coldsnap/issues",
     },
     install_requires=[
-        "numpy>=2.0.2",
-        "pandas>=2.2.3",
-        "scikit-learn>=1.5.2",
-        "matplotlib>=3.9.2",
-        "shap>=0.46.0",
+        "numpy>=2.0.0,<3.0.0",
+        "pandas>=2.0.0,<3.0.0",
+        "scikit-learn>=1.5.2,<2.0.0",
+        "matplotlib>=3.9.0,<4.0.0",
+        "shap>=0.46.0,<1.0.0",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

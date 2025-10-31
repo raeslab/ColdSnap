@@ -1,32 +1,102 @@
-from typing import Optional, Literal, List
+"""Machine learning model wrapper with serialization and evaluation capabilities.
+
+This module provides the Model class which wraps scikit-learn estimators (classifiers,
+regressors, or transformers) with their associated Data. It includes automatic type
+detection, evaluation metrics, visualization capabilities, and serialization.
+"""
+
+import hashlib
+import pickle
+from typing import Literal, Optional
+
 from sklearn.base import BaseEstimator, is_classifier, is_regressor
 from sklearn.metrics import (
-    roc_auc_score,
     accuracy_score,
-    precision_score,
-    recall_score,
     f1_score,
-    mean_squared_error,
     mean_absolute_error,
+    mean_squared_error,
+    precision_score,
     r2_score,
+    recall_score,
+    roc_auc_score,
     root_mean_squared_error,
 )
+
 from .data import Data
-from .serializable import Serializable
 from .mixins import ConfusionMatrixMixin, ROCMixin, SHAPMixin
-import pickle
-import hashlib
+from .serializable import Serializable
 
 
 class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
+    """ML model wrapper supporting classifiers, regressors, and transformers.
+
+    Model combines a scikit-learn estimator with Data to create a complete snapshot
+    of a machine learning workflow. It provides:
+    - Automatic estimator type detection (classifier/regressor/transformer)
+    - Type-appropriate methods (fit, predict, transform, predict_proba, evaluate)
+    - Evaluation metrics (classification or regression specific)
+    - Visualization capabilities (confusion matrix, ROC curves, SHAP)
+    - Serialization with data integrity checking
+
+    The class maintains backward compatibility by accepting both 'clf' and 'estimator'
+    parameters, though 'estimator' is preferred for new code.
+
+    Attributes:
+        data: Data object containing train/test splits.
+        estimator: The scikit-learn estimator (classifier, regressor, or transformer).
+        clf: Backward-compatible alias for estimator.
+        description: Optional detailed description of the model.
+        short_description: Optional brief description for summaries.
+
+    Examples:
+        Classifier workflow:
+        >>> from sklearn.ensemble import RandomForestClassifier
+        >>> model = Model(data=data, estimator=RandomForestClassifier())
+        >>> model.fit()
+        >>> predictions = model.predict(data.X_test)
+        >>> metrics = model.evaluate()
+        >>> model.display_confusion_matrix()
+
+        Regressor workflow:
+        >>> from sklearn.linear_model import LinearRegression
+        >>> model = Model(data=data, estimator=LinearRegression())
+        >>> model.fit()
+        >>> predictions = model.predict(data.X_test)
+        >>> metrics = model.evaluate()  # Returns RMSE, MAE, R2, MSE
+
+        Transformer workflow:
+        >>> from sklearn.preprocessing import StandardScaler
+        >>> model = Model(data=data, estimator=StandardScaler())
+        >>> model.fit()
+        >>> X_scaled = model.transform(data.X_train)  # Preserves DataFrame structure
+    """
+
     def __init__(
         self,
-        data: Optional[Data] = None,
-        clf: Optional[BaseEstimator] = None,
-        estimator: Optional[BaseEstimator] = None,
-        description: Optional[str] = None,
-        short_description: Optional[str] = None,
+        data: Data | None = None,
+        clf: BaseEstimator | None = None,
+        estimator: BaseEstimator | None = None,
+        description: str | None = None,
+        short_description: str | None = None,
     ):
+        """Initialize Model with data and estimator.
+
+        Args:
+            data: Data object containing train/test splits. Optional, can be set later.
+            clf: Scikit-learn estimator (backward-compatible parameter). Use 'estimator'
+                for new code.
+            estimator: Scikit-learn estimator (classifier, regressor, or transformer).
+                Preferred parameter name.
+            description: Optional detailed description of the model.
+            short_description: Optional brief description for summaries and tables.
+
+        Raises:
+            ValueError: If both 'clf' and 'estimator' parameters are provided.
+
+        Examples:
+            >>> model = Model(data=data, estimator=RandomForestClassifier())
+            >>> model = Model(data=data, clf=RandomForestClassifier())  # Legacy syntax
+        """
         # Accept either clf or estimator parameter, not both
         if clf is not None and estimator is not None:
             raise ValueError("Provide either 'clf' or 'estimator' parameter, not both.")
@@ -38,7 +108,7 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         self._short_description = short_description
 
     @property
-    def data(self) -> Optional[Data]:
+    def data(self) -> Data | None:
         return self._data
 
     @data.setter
@@ -46,7 +116,7 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         self._data = data
 
     @property
-    def clf(self) -> Optional[BaseEstimator]:
+    def clf(self) -> BaseEstimator | None:
         """Classifier/estimator (backward compatible property)."""
         return self._clf
 
@@ -55,7 +125,7 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         self._clf = clf
 
     @property
-    def estimator(self) -> Optional[BaseEstimator]:
+    def estimator(self) -> BaseEstimator | None:
         """Generic estimator property (supports classifiers, regressors, and transformers)."""
         return self._clf
 
@@ -64,7 +134,7 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         self._clf = estimator
 
     @property
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         return self._description
 
     @description.setter
@@ -72,7 +142,7 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         self._description = description
 
     @property
-    def short_description(self) -> Optional[str]:
+    def short_description(self) -> str | None:
         return self._short_description
 
     @short_description.setter
@@ -81,8 +151,16 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
 
     def _get_estimator_type(
         self,
-    ) -> Optional[Literal["classifier", "regressor", "transformer"]]:
-        """Determine the type of the estimator."""
+    ) -> Literal["classifier", "regressor", "transformer"] | None:
+        """Determine the type of the estimator using sklearn's type checking.
+
+        Returns:
+            One of "classifier", "regressor", "transformer", or None if no estimator set.
+
+        Note:
+            This uses sklearn's is_classifier() and is_regressor() functions. Anything
+            that doesn't match these is assumed to be a transformer.
+        """
         if self._clf is None:
             return None
         if is_classifier(self._clf):
@@ -94,6 +172,18 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
 
     @property
     def hash(self) -> str:
+        """Generate SHA256 hash of the serialized estimator.
+
+        This provides a unique fingerprint of the model's state (parameters, structure)
+        that can be used to identify identical models or detect changes.
+
+        Returns:
+            64-character hexadecimal SHA256 hash string.
+
+        Examples:
+            >>> model.hash
+            'a1b2c3d4e5f6...'
+        """
         # Serialize the classifier to a byte stream
         clf_bytes = pickle.dumps(self._clf)
 
@@ -101,6 +191,19 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         return hashlib.sha256(clf_bytes).hexdigest()
 
     def fit(self) -> None:
+        """Fit the estimator on training data.
+
+        Automatically handles different estimator types:
+        - Transformers: Fit on X_train only (no labels needed)
+        - Classifiers/Regressors: Fit on X_train and y_train
+
+        Raises:
+            ValueError: If no data or estimator is provided.
+
+        Examples:
+            >>> model = Model(data=data, estimator=RandomForestClassifier())
+            >>> model.fit()  # Trains on data.X_train, data.y_train
+        """
         if self._data is None:
             raise ValueError("No data provided to fit the estimator.")
         if self._clf is None:
@@ -116,14 +219,27 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
             self._clf.fit(self._data.X_train, self._data.y_train)
 
     def predict(self, data):
+        """Generate predictions using the fitted estimator.
+
+        Args:
+            data: Input features (array-like or pandas DataFrame).
+
+        Returns:
+            Predicted values (classification labels or regression targets).
+
+        Raises:
+            ValueError: If no estimator is provided.
+            TypeError: If called on a transformer (use transform() instead).
+
+        Examples:
+            >>> predictions = model.predict(data.X_test)
+        """
         if self._clf is None:
             raise ValueError("No estimator provided.")
 
         estimator_type = self._get_estimator_type()
         if estimator_type == "transformer":
-            raise TypeError(
-                "Cannot call predict() on a transformer. Use transform() instead."
-            )
+            raise TypeError("Cannot call predict() on a transformer. Use transform() instead.")
 
         return self._clf.predict(data)
 
@@ -167,6 +283,26 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         return self._clf.transform(data)
 
     def predict_proba(self, data):
+        """Generate probability predictions for classification.
+
+        Only available for classifiers that support probability predictions.
+
+        Args:
+            data: Input features (array-like or pandas DataFrame).
+
+        Returns:
+            Array of shape (n_samples, n_classes) with class probabilities.
+
+        Raises:
+            ValueError: If no estimator is provided.
+            TypeError: If called on a transformer or regressor.
+            NotImplementedError: If classifier doesn't support probability predictions.
+
+        Examples:
+            >>> probas = model.predict_proba(data.X_test)
+            >>> probas.shape
+            (100, 3)  # 100 samples, 3 classes
+        """
         if self._clf is None:
             raise ValueError("No estimator provided.")
 
@@ -182,11 +318,41 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         if hasattr(self._clf, "predict_proba"):
             return self._clf.predict_proba(data)
         else:
-            raise NotImplementedError(
-                "The classifier does not support probability predictions."
-            )
+            raise NotImplementedError("The classifier does not support probability predictions.")
 
     def evaluate(self, X_test: Optional = None, y_test: Optional = None) -> dict:
+        """Evaluate the fitted estimator and return performance metrics.
+
+        Automatically computes appropriate metrics based on estimator type:
+        - Classifiers: accuracy, precision, recall, f1, roc_auc
+        - Regressors: rmse, mae, r2, mse
+
+        Args:
+            X_test: Optional test features. If not provided, uses self.data.X_test.
+            y_test: Optional test labels. If not provided, uses self.data.y_test.
+
+        Returns:
+            Dictionary of metric names to values.
+
+        Raises:
+            ValueError: If no data is provided and model has no data, or if only one
+                of X_test/y_test is provided.
+            TypeError: If called on a transformer.
+
+        Examples:
+            Classifier evaluation:
+            >>> metrics = model.evaluate()
+            >>> metrics
+            {'accuracy': 0.95, 'precision': 0.94, 'recall': 0.95, 'f1': 0.94, 'roc_auc': 0.98}
+
+            Regressor evaluation:
+            >>> metrics = model.evaluate()
+            >>> metrics
+            {'rmse': 2.34, 'mae': 1.87, 'r2': 0.89, 'mse': 5.48}
+
+            External data evaluation:
+            >>> metrics = model.evaluate(X_external, y_external)
+        """
         if X_test is None and y_test is None and not self._data:
             raise ValueError("No data provided to evaluate the estimator.")
         if not self._clf:
@@ -220,17 +386,11 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
             return metrics
 
         # Handle classification metrics
-        y_proba = (
-            self._clf.predict_proba(X_test)
-            if hasattr(self._clf, "predict_proba")
-            else None
-        )
+        y_proba = self._clf.predict_proba(X_test) if hasattr(self._clf, "predict_proba") else None
 
         metrics = {
             "accuracy": accuracy_score(y_test, y_pred),
-            "precision": precision_score(
-                y_test, y_pred, average="weighted", zero_division=0
-            ),
+            "precision": precision_score(y_test, y_pred, average="weighted", zero_division=0),
             "recall": recall_score(y_test, y_pred, average="weighted"),
             "f1": f1_score(y_test, y_pred, average="weighted"),
         }
@@ -248,20 +408,49 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         return metrics
 
     def purge(self) -> None:
-        """Purges the associated data instance if it exists."""
+        """Remove all data rows while preserving structure.
+
+        Calls purge() on the associated Data object if one exists. This is useful for
+        sharing model snapshots without exposing training data.
+
+        Examples:
+            >>> model.purge()  # Removes all data rows, keeps column structure
+        """
         if self._data is not None:
             self._data.purge()
 
     def summary(self) -> dict:
+        """Generate comprehensive summary of model and data metadata.
+
+        Returns:
+            Dictionary containing model and data information:
+            - model_code: Short description of the model
+            - model_description: Detailed description of the model
+            - model_hash: SHA256 hash of the estimator
+            - estimator_type: One of "classifier", "regressor", "transformer"
+            - data_code: Short description of the data
+            - data_description: Detailed description of the data
+            - data_hash: SHA256 hash of the data
+            - num_features: Number of features
+            - features: Comma-separated list of feature names
+            - num_classes: Number of classes (classifiers only)
+            - classes: Comma-separated list of class values (classifiers only)
+
+        Raises:
+            ValueError: If no data is available.
+
+        Examples:
+            >>> summary = model.summary()
+            >>> summary['estimator_type']
+            'classifier'
+            >>> summary['num_features']
+            4
+        """
         if self._data is None:
             raise ValueError("No data available for summary.")
 
-        num_features = self._data.X_train.shape[
-            1
-        ]  # Number of features in training data
-        feature_list = ", ".join(
-            self._data.features
-        )  # Get features from the Data class
+        num_features = self._data.X_train.shape[1]  # Number of features in training data
+        feature_list = ", ".join(self._data.features)  # Get features from the Data class
 
         estimator_type = self._get_estimator_type()
 
@@ -280,16 +469,14 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         # Only include class information for classifiers
         if estimator_type == "classifier" and self._data.classes is not None:
             num_classes = len(self._data.classes)  # Get number of unique classes
-            class_list = ", ".join(
-                map(str, self._data.classes)
-            )  # Unique classes as a string
+            class_list = ", ".join(map(str, self._data.classes))  # Unique classes as a string
             summary_dict["num_classes"] = num_classes
             summary_dict["classes"] = class_list
 
         return summary_dict
 
     @property
-    def features(self) -> Optional[List[str]]:
+    def features(self) -> list[str] | None:
         """Get feature names, preferring sklearn's feature_names_in_ over Data object."""
         # First try to get from fitted estimator (most reliable)
         if self._clf is not None and hasattr(self._clf, "feature_names_in_"):

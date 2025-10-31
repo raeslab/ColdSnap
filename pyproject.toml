@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ColdSnap"
+version = "0.1.0"
+description = "Create snapshots of machine learning models and their training data"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Creative Commons Attribution-NonCommercial-ShareAlike 4.0"}
+authors = [
+    {name = "Sebastian Proost", email = "sebastian.proost@gmail.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy>=2.0.0,<3.0.0",
+    "pandas>=2.0.0,<3.0.0",
+    "scikit-learn>=1.5.2,<2.0.0",
+    "matplotlib>=3.9.0,<4.0.0",
+    "shap>=0.46.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/raeslab/coldsnap/"
+"Bug Tracker" = "https://github.com/raeslab/coldsnap/issues"
+
+[tool.ruff]
+# Set line length to 100 characters
+line-length = 100
+# Target Python 3.10 and above
+target-version = "py310"
+
+# Enable specific rule sets
+lint.select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort (import sorting)
+    "N",    # pep8-naming
+    "UP",   # pyupgrade (modern Python syntax)
+    "B",    # flake8-bugbear (common bugs)
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+]
+
+# Ignore specific rules
+lint.ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "N803",   # Argument name should be lowercase (ML convention: X_train, X_test)
+    "N806",   # Variable name should be lowercase (ML convention: X, y, X_train, etc.)
+]
+
+# Exclude directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    "tmp",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Allow unused imports in __init__.py files
+"__init__.py" = ["F401"]
+# Allow assert statements in tests
+"tests/**/*.py" = ["S101"]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+testpaths = ["tests"]
+# Only filter specific known warnings, not all warnings
+filterwarnings = [
+    # Add specific warnings to ignore here when needed
+    # Example: "ignore::DeprecationWarning:shap.*"
+]
