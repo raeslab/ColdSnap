@@ -1,6 +1,8 @@
-import pytest
-import pickle
 import gzip
+import pickle
+
+import pytest
+
 from coldsnap.serializable import (
     Serializable,
 )  # Replace `your_module` with the actual module name

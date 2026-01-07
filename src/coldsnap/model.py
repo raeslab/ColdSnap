@@ -7,6 +7,7 @@ detection, evaluation metrics, visualization capabilities, and serialization.
 
 import hashlib
 import pickle
+import warnings
 from typing import Literal, Optional
 
 from sklearn.base import BaseEstimator, is_classifier, is_regressor
@@ -221,6 +222,11 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
     def predict(self, data):
         """Generate predictions using the fitted estimator.
 
+        Validates column order when DataFrame input is provided. If columns are present
+        but in incorrect order, they will be automatically reordered to match training
+        data with a warning. If input has no column names (e.g., numpy array), a warning
+        is issued about assuming the order matches training.
+
         Args:
             data: Input features (array-like or pandas DataFrame).
 
@@ -228,7 +234,8 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
             Predicted values (classification labels or regression targets).
 
         Raises:
-            ValueError: If no estimator is provided.
+            ValueError: If no estimator is provided, or if DataFrame is missing required
+                features.
             TypeError: If called on a transformer (use transform() instead).
 
         Examples:
@@ -240,6 +247,45 @@ class Model(Serializable, ConfusionMatrixMixin, ROCMixin, SHAPMixin):
         estimator_type = self._get_estimator_type()
         if estimator_type == "transformer":
             raise TypeError("Cannot call predict() on a transformer. Use transform() instead.")
+
+        # Validate and reorder columns if necessary
+        import pandas as pd
+
+        if isinstance(data, pd.DataFrame):
+            expected_features = self.features
+
+            if expected_features is not None:
+                # Check if all expected features are present
+                data_columns = list(data.columns)
+                missing_features = set(expected_features) - set(data_columns)
+
+                if missing_features:
+                    raise ValueError(
+                        f"Input DataFrame is missing required features: {sorted(missing_features)}. "
+                        f"Expected features: {expected_features}"
+                    )
+
+                # Check if columns are in the correct order
+                # Only consider the features the model expects (ignore extra columns)
+                if data_columns != expected_features:
+                    # Reorder columns to match expected order (and drop extra columns)
+                    data = data[expected_features]
+                    warnings.warn(
+                        f"Input DataFrame columns have been reordered to match the expected "
+                        f"feature order: {expected_features}. Original order was: {data_columns}",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+        else:
+            # Input is array-like (e.g., numpy array) without column names
+            expected_features = self.features
+            if expected_features is not None:
+                warnings.warn(
+                    "Input data has no column names. Assuming features are in the expected "
+                    f"order: {expected_features}",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
         return self._clf.predict(data)
 

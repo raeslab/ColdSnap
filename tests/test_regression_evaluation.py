@@ -1,7 +1,8 @@
-import pytest
 import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
+import pytest
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import Lasso, LinearRegression, Ridge
+
 from coldsnap import Data, Model
 
 
