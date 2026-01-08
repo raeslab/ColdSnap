@@ -1,5 +1,6 @@
 import pytest
 from sklearn.ensemble import RandomForestClassifier
+
 from coldsnap import Data, Model
 
 
@@ -602,8 +603,8 @@ def test_estimator_property_works(sample_dataframe):
 
 def test_get_estimator_type(sample_dataframe):
     """Test that _get_estimator_type correctly identifies estimator types."""
-    from sklearn.preprocessing import StandardScaler
     from sklearn.linear_model import LinearRegression
+    from sklearn.preprocessing import StandardScaler
 
     data_instance = Data.from_df(sample_dataframe, "label", test_size=0.2, random_state=42)
 
@@ -764,3 +765,140 @@ def test_features_property_consistency(sample_dataframe):
 
     # Both should have the same content (though prioritization differs)
     assert set(features_before) == set(features_after)
+
+
+# Tests for column order validation in predict()
+def test_predict_with_correct_column_order(model_instance):
+    """Test that predict works normally when columns are in correct order."""
+    model_instance.fit()
+    X_test = model_instance.data.X_test
+
+    # Predict should work without warnings when columns are in correct order
+    predictions = model_instance.predict(X_test)
+
+    assert len(predictions) == len(X_test)
+    assert set(predictions).issubset(set(model_instance.data.y_train.unique()))
+
+
+def test_predict_with_incorrect_column_order(model_instance):
+    """Test that predict reorders columns and warns when order is incorrect."""
+
+    model_instance.fit()
+    X_test = model_instance.data.X_test
+
+    # Reorder columns (reverse order)
+    X_test_reordered = X_test[list(reversed(X_test.columns))]
+
+    # Predict should work but issue a warning
+    with pytest.warns(UserWarning, match="columns have been reordered"):
+        predictions = model_instance.predict(X_test_reordered)
+
+    # Predictions should still be correct
+    assert len(predictions) == len(X_test)
+    assert set(predictions).issubset(set(model_instance.data.y_train.unique()))
+
+
+def test_predict_with_missing_columns(model_instance):
+    """Test that predict raises error when required columns are missing."""
+
+    model_instance.fit()
+    X_test = model_instance.data.X_test
+
+    # Remove one column
+    X_test_missing = X_test.drop(columns=[X_test.columns[0]])
+
+    # Predict should raise ValueError
+    with pytest.raises(ValueError, match="missing required features"):
+        model_instance.predict(X_test_missing)
+
+
+def test_predict_with_extra_columns(model_instance):
+    """Test that predict works with extra columns and reorders appropriately."""
+
+    model_instance.fit()
+    X_test = model_instance.data.X_test
+
+    # Add an extra column
+    X_test_extra = X_test.copy()
+    X_test_extra["extra_feature"] = 999
+
+    # Predict should work and warn about reordering (due to extra column)
+    with pytest.warns(UserWarning, match="columns have been reordered"):
+        predictions = model_instance.predict(X_test_extra)
+
+    # Predictions should still be correct
+    assert len(predictions) == len(X_test)
+    assert set(predictions).issubset(set(model_instance.data.y_train.unique()))
+
+
+def test_predict_with_numpy_array_warns(model_instance):
+    """Test that predict warns when input is numpy array without column names."""
+
+    model_instance.fit()
+    X_test = model_instance.data.X_test
+
+    # Convert to numpy array (no column names)
+    X_test_array = X_test.values
+
+    # Predict should work but issue a warning about assuming order
+    with pytest.warns(
+        UserWarning, match="no column names.*Assuming features are in the expected order"
+    ):
+        predictions = model_instance.predict(X_test_array)
+
+    # Predictions should still work
+    assert len(predictions) == len(X_test)
+
+
+def test_predict_column_order_with_regressor(sample_dataframe):
+    """Test that column order validation works for regressors too."""
+    from sklearn.linear_model import LinearRegression
+
+    # Create regression dataset
+    df = sample_dataframe.copy()
+    df["target"] = df["feature1"] * 2 + df["feature2"] * 3
+    df = df.drop(columns=["label"])
+
+    data_instance = Data.from_df(df, "target", test_size=0.2, random_state=42)
+    regressor = LinearRegression()
+    model = Model(data=data_instance, estimator=regressor)
+    model.fit()
+
+    X_test = model.data.X_test
+
+    # Test with reordered columns
+    X_test_reordered = X_test[list(reversed(X_test.columns))]
+
+    with pytest.warns(UserWarning, match="columns have been reordered"):
+        predictions = model.predict(X_test_reordered)
+
+    assert len(predictions) == len(X_test)
+
+
+def test_predict_column_order_no_features_available():
+    """Test that predict works without validation when no features are available."""
+    import pandas as pd
+    from sklearn.ensemble import RandomForestClassifier
+
+    # Create model without Data object (features unavailable)
+    clf = RandomForestClassifier(random_state=42)
+    model = Model(estimator=clf)
+
+    # Manually fit on some data
+    X_train = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    y_train = pd.Series([0, 1, 0])
+    model.clf.fit(X_train, y_train)
+
+    # Now model has feature_names_in_
+    assert model.features == ["a", "b"]
+
+    # Test with correct order - should work
+    X_test = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+    predictions = model.predict(X_test)
+    assert len(predictions) == 2
+
+    # Test with incorrect order - should warn and reorder
+    X_test_wrong = pd.DataFrame({"b": [3, 4], "a": [1, 2]})
+    with pytest.warns(UserWarning, match="columns have been reordered"):
+        predictions = model.predict(X_test_wrong)
+    assert len(predictions) == 2

@@ -1,11 +1,12 @@
-from coldsnap import Data, Model
+import os
 
+import pandas as pd
 from sklearn import datasets
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
-import pandas as pd
-import os
+
+from coldsnap import Data, Model
 
 iris = datasets.load_iris(as_frame=True)
 iris_df = pd.merge(iris.data, iris.target, how="inner", left_index=True, right_index=True)

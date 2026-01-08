@@ -1,5 +1,6 @@
-from coldsnap import Model
 import matplotlib.pyplot as plt
+
+from coldsnap import Model
 
 if __name__ == "__main__":
     try:

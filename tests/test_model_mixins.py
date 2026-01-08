@@ -1,8 +1,9 @@
+import matplotlib
 import pytest
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay
+
 from coldsnap import Data, Model
-from sklearn.metrics import RocCurveDisplay, ConfusionMatrixDisplay
-import matplotlib
 
 matplotlib.use("Agg")  # Include this line to suppress windows popping up during tests
 
